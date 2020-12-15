@@ -6,13 +6,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using GT.SaveData.Hash;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace GT.SaveData.Tester {
     class Program {
         static void PrintInfo() {
-            Console.WriteLine("Version 0.9.9");
+            var assembly = Assembly.GetExecutingAssembly();
+            var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
+            string version = fvi.FileVersion;
+
+            Console.WriteLine($"Version {version}");
             Console.WriteLine("Coded by xfileFIN (Team eventHorizon)");
-            Console.WriteLine("Credits: Echelo and q-k for reverse engineering the encryption and hashes used.");
+            Console.WriteLine(@"Credits: 
+    - Echelo and q-k for reverse engineering the encryption and hashes used.
+    - Nenkai for solving the correct GT6 tmp_save_work header.");
             Console.WriteLine();
             Console.WriteLine("Usage: <operation> <saveFolder>");
             Console.WriteLine("Operations:");

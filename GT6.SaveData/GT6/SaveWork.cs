@@ -50,21 +50,31 @@ namespace GT.SaveData.GT6 {
         }
 
         internal struct Header {
-            internal int Magic { get; set; }
-            internal long Version { get; set; }
+            internal int VersionMajor { get; set; }
+            internal int VersionMinor { get; set; }
+            internal int Crc32 { get; set; }
             internal int Length { get; set; }
 
             public Header(EndianBinReader reader) {
-                if ((Magic = reader.ReadInt32()) != 0x00000018)
-                    throw new Exception("Header for GT6 save_work file is invalid.");
+                VersionMajor = reader.ReadInt32();
 
-                Version = reader.ReadInt64();
+                switch (VersionMajor) {
+                    case 0x00000018:
+                    case 0x00000012:
+                        break;
+                    default:
+                        throw new Exception("Header for GT6 save_work file is invalid.");
+                }
+
+                VersionMinor = reader.ReadInt32();
+                Crc32 = reader.ReadInt32();
                 Length = reader.ReadInt32();
             }
 
             public void Write(EndianBinWriter writer) {
-                writer.Write(Magic);
-                writer.Write(Version);
+                writer.Write(VersionMajor);
+                writer.Write(VersionMinor);
+                writer.Write(Crc32);
                 writer.Write(Length);
             }
         }

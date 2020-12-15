@@ -83,13 +83,18 @@ namespace GT.SaveData {
                     // Encrypt bank book blob first if necessary
                     var saveWork = new SaveWork(buffer);
 
-                    // Read bank_book_blob btree
-                    var bbbData = saveWork.BankBookBlob;
-                    // Check if BBB is decrypted
-                    if (bbbData[0] == 0x0E) {
-                        var encryptedBbb = EncryptData(bbbData, false);
-                        saveWork.BankBookBlob = encryptedBbb;
-                        buffer = saveWork.Save();
+                    try {
+                        // Read bank_book_blob btree
+                        var bbbData = saveWork.BankBookBlob;
+                        // Check if BBB is decrypted
+                        if (bbbData[0] == 0x0E) {
+                            var encryptedBbb = EncryptData(bbbData, false);
+                            saveWork.BankBookBlob = encryptedBbb;
+                            buffer = saveWork.Save();
+                        }
+                    }
+                    catch (Exception ex) {
+                        // Lazy fix for the GT6 GC demo which doesn't have BBB
                     }
 
                     buffer = EncryptData(buffer);
