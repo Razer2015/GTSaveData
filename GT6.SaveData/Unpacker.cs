@@ -24,9 +24,10 @@ namespace GT.SaveData {
                 case Game.GT5TTC:
                     var files = Directory.GetFiles(_savePath, "GAME*.DAT", SearchOption.TopDirectoryOnly);
                     foreach (var file in files) {
-                        DecryptFile(file);
+                        File.WriteAllBytes(file, DecryptFile(file));
                     }
                     break;
+                case Game.GT6GC:
                 case Game.GT6:
                     if (File.Exists(Path.Combine(_savePath, "PARAM.PFD")))
                         new SonyCrypt(_game).Decrypt(_savePath);
@@ -45,37 +46,37 @@ namespace GT.SaveData {
 
         private bool DecryptGT6Files(string prefix, bool decryptBbb = true) {
             try {
+                if (!File.Exists(Path.Combine(_savePath, $"{prefix}.0"))) return false;
+
                 File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_toc_work"), DecryptFile(Path.Combine(_savePath, $"{prefix}.0")));
                 var saveWorkData = DecryptFile(Path.Combine(_savePath, $"{prefix}.1"));
 
-                if (decryptBbb) {
+                if (_game == Game.GT6 && decryptBbb) {
                     var saveWork = new SaveWork(saveWorkData);
 
-                    try {
-                        // Read bank_book_blob btree
-                        var bbbData = saveWork.BankBookBlob;
-                        // Check if BBB is encrypted
-                        if (bbbData[7] != 0x0E) {
-                            var decryptedBbb = DecryptData(bbbData);
-                            saveWork.BankBookBlob = decryptedBbb;
-                            saveWorkData = saveWork.Save();
-                        }
-                    }
-                    catch (Exception ex) {
-                        // Lazy fix for the GT6 GC demo which doesn't have BBB
+                    // Read bank_book_blob btree
+                    var bbbData = saveWork.BankBookBlob;
+                    // Check if BBB is encrypted
+                    if (bbbData[7] != 0x0E) {
+                        var decryptedBbb = DecryptData(bbbData);
+                        saveWork.BankBookBlob = decryptedBbb;
+                        saveWorkData = saveWork.Save();
                     }
                 }
                 File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_save_work"), saveWorkData);
                 File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_db_work"), DecryptFile(Path.Combine(_savePath, $"{prefix}.2")));
                 File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_garage_work"), DecryptFile(Path.Combine(_savePath, $"{prefix}.3")));
-                File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_garage_pad_stockyard"), DecryptFile(Path.Combine(_savePath, $"{prefix}.4")));
-
-                var buffer = DecryptFile(Path.Combine(_savePath, $"{prefix}.5"));
-                if (File.Exists(Path.Combine(_savePath, $"{prefix}.6"))) {
-                    buffer = buffer.Concat(DecryptFile(Path.Combine(_savePath, $"{prefix}.6"))).ToArray();
+                if (File.Exists(Path.Combine(_savePath, $"{prefix}.4"))) {
+                    File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_garage_pad_stockyard"), DecryptFile(Path.Combine(_savePath, $"{prefix}.4")));
+                }
+                if (File.Exists(Path.Combine(_savePath, $"{prefix}.5"))) {
+                    var buffer = DecryptFile(Path.Combine(_savePath, $"{prefix}.5"));
+                    if (File.Exists(Path.Combine(_savePath, $"{prefix}.6"))) {
+                        buffer = buffer.Concat(DecryptFile(Path.Combine(_savePath, $"{prefix}.6"))).ToArray();
+                    }
+                    File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_garage_stockyard"), buffer);
                 }
 
-                File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_garage_stockyard"), buffer);
 
                 return true;
             }
@@ -84,13 +85,13 @@ namespace GT.SaveData {
             }
         }
 
-        private static byte[] DecryptFile(string filePath) {
+        private byte[] DecryptFile(string filePath) {
             var data = File.ReadAllBytes(filePath);
             return DecryptData(data);
         }
 
-        private static byte[] DecryptData(byte[] data) {
-            data = SwapBytes.ByteSwap(data);
+        private byte[] DecryptData(byte[] data) {
+            data = SwapBytes.ByteSwap(data, _game);
 #if DEBUG
             //File.WriteAllBytes($"{filePath}.byteswapped.bin", data);
 #endif

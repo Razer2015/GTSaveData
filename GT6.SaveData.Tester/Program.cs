@@ -29,7 +29,7 @@ namespace GT.SaveData.Tester {
         }
 
         static void Main(string[] args) {
-            if (args.Length != 2) {
+            if (args.Length < 1) {
                 PrintInfo();
 
                 Console.WriteLine("Press any key to exit...");
@@ -37,15 +37,52 @@ namespace GT.SaveData.Tester {
                 return;
             }
 
+            if (args.Length == 1) {
+                FileAttributes attr = File.GetAttributes(args[0]);
+                if ((attr & FileAttributes.Directory) != FileAttributes.Directory) {
+                    PrintInfo();
+
+                    Console.WriteLine("Press any key to exit...");
+                    Console.ReadKey();
+                    return;
+                }
+
+                Console.Write("Select the operation decrypt/encrypt (d or e): ");
+                var response = Console.ReadLine();
+                switch (response) {
+                    case "d":
+                        args = new string[] {
+                            "d",
+                            args[0]
+                        };
+                        break;
+                    case "e":
+                        args = new string[] {
+                            "e",
+                            args[0]
+                        };
+                        break;
+                    default:
+                        Console.WriteLine("Invalid option, expected d for decrypt or e for encrypt.");
+                        Console.WriteLine();
+                        Console.WriteLine("Press any key to exit...");
+                        Console.ReadKey();
+                        return;
+                }
+            }
+
+            var gameCode = Path.GetFileName(args[1]);
+            var game = GetGame(gameCode);
+
             if (args[0].Equals("d", StringComparison.OrdinalIgnoreCase) ||
                 args[0].Equals("--decrypt", StringComparison.OrdinalIgnoreCase)) {
-                new Unpacker(args[1], Game.GT6).Decrypt();
+                new Unpacker(args[1], game).Decrypt();
                 Console.WriteLine("Save successfully decrypted.");
             }
             else if (args[0].Equals("e", StringComparison.OrdinalIgnoreCase) ||
                      args[0].Equals("--encrypt", StringComparison.OrdinalIgnoreCase)) {
                 try {
-                    new Repacker(args[1], Game.GT6).Encrypt();
+                    new Repacker(args[1], game).Encrypt();
                     Console.WriteLine("Save successfully encrypted.");
                 }
                 catch (Exception ex) {
@@ -81,6 +118,29 @@ namespace GT.SaveData.Tester {
             //new Repacker(filePath, Game.GT6).Encrypt();
             ////new Unpacker(filePath, Game.GT6).Decrypt();
 #endif
+        }
+
+        private static Game GetGame(string gameCode) {
+            switch (gameCode) {
+                case "NPEA90002-GAME-":
+                    return Game.GTHD;
+                case "NPJA90061-GAME-":
+                    return Game.GT5P;
+                case "NPHA80080-GAME-":
+                case "NPUA70087-GAME-":
+                case "NPEA90052-GAME-":
+                    return Game.GT5TTC;
+                case "BCJS37016-GAME6":
+                case "BCJS37016-BKUP6":
+                    return Game.GT6;
+                case "DEMO32768-GAME6":
+                case "DEMO32768-BKUP6":
+                    return Game.GT6GC;
+                default: {
+                        // TODO: Ask user for the correct game version
+                        throw new NotImplementedException("Game code couldn't be recognized from the directory. Please use the correct game code as the save directory name.");
+                    }
+            }
         }
 
         private static byte[] ComputeTigerHash(byte[] data) {

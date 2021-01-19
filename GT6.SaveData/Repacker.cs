@@ -27,7 +27,12 @@ namespace GT.SaveData {
                 case Game.GTPSP:
                 case Game.GT5P:
                 case Game.GT5TTC:
-                    throw new NotImplementedException();
+                    var files = Directory.GetFiles(_savePath, "GAME*.DAT", SearchOption.TopDirectoryOnly);
+                    foreach (var file in files) {
+                        File.WriteAllBytes(file, EncryptFile(file));
+                    }
+                    break;
+                case Game.GT6GC:
                 case Game.GT6:
                     var encryptedFirst = EncryptGT6Files("GT6");
                     var encryptedSecond = EncryptGT6Files("GT6_1");
@@ -46,14 +51,18 @@ namespace GT.SaveData {
 
         private bool EncryptGT6Files(string prefix) {
             try {
-                var indexData = new GT6Index(File.ReadAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_toc_work")));
+                var indexData = new GT6Index(File.ReadAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_toc_work")), _game);
 
                 EncryptAndSetMetaInfo(indexData, Path.Combine(_savePath, $"{prefix}.tmp_save_work"));
                 EncryptAndSetMetaInfo(indexData, Path.Combine(_savePath, $"{prefix}.tmp_db_work"));
                 EncryptAndSetMetaInfo(indexData, Path.Combine(_savePath, $"{prefix}.tmp_garage_work"));
-                EncryptAndSetMetaInfo(indexData, Path.Combine(_savePath, $"{prefix}.tmp_garage_pad_stockyard"));
-                EncryptAndSetMetaInfo(indexData, Path.Combine(_savePath, $"{prefix}.tmp_garage_stockyard"));
-
+                if (File.Exists(Path.Combine(_savePath, $"{prefix}.tmp_garage_pad_stockyard"))) {
+                    EncryptAndSetMetaInfo(indexData, Path.Combine(_savePath, $"{prefix}.tmp_garage_pad_stockyard"));
+                }
+                if (File.Exists(Path.Combine(_savePath, $"{prefix}.tmp_garage_stockyard"))) {
+                    EncryptAndSetMetaInfo(indexData, Path.Combine(_savePath, $"{prefix}.tmp_garage_stockyard"));
+                }
+                
                 // Encrypt the index file
                 var buffer = EncryptData(indexData.GetBytes);
                 File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.0"), buffer);
@@ -81,9 +90,9 @@ namespace GT.SaveData {
                     indexData.SetMetaData(1, metaInfo);
 
                     // Encrypt bank book blob first if necessary
-                    var saveWork = new SaveWork(buffer);
+                    if (_game == Game.GT6) {
+                        var saveWork = new SaveWork(buffer);
 
-                    try {
                         // Read bank_book_blob btree
                         var bbbData = saveWork.BankBookBlob;
                         // Check if BBB is decrypted
@@ -92,9 +101,6 @@ namespace GT.SaveData {
                             saveWork.BankBookBlob = encryptedBbb;
                             buffer = saveWork.Save();
                         }
-                    }
-                    catch (Exception ex) {
-                        // Lazy fix for the GT6 GC demo which doesn't have BBB
                     }
 
                     buffer = EncryptData(buffer);
@@ -156,8 +162,13 @@ namespace GT.SaveData {
                 case Game.GTHD:
                 case Game.GTPSP:
                 case Game.GT5P:
+                    data = PS2Zip.Deflate(data);
+                    break;
                 case Game.GT5TTC:
-                    throw new NotImplementedException();
+                    data = PS2Zip.Deflate(data);
+                    data = PS2Zip.Deflate(data);
+                    break;
+                case Game.GT6GC:
                 case Game.GT6:
                     if (deflate)
                         data = PS2Zip.Deflate(data);
@@ -201,7 +212,7 @@ namespace GT.SaveData {
                 }
 
                 var buffer = ms2.ToArray();
-                buffer = SwapBytes.ByteSwap(buffer);
+                buffer = SwapBytes.ByteSwap(buffer, _game);
 
                 return buffer;
             }

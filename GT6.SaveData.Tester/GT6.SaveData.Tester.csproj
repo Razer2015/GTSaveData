@@ -8,7 +8,7 @@
     <ProjectGuid>{9E33F237-B1BD-4270-84F0-7606B9D6BD3B}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>GT6.SaveData.Tester</RootNamespace>
-    <AssemblyName>GT6.SaveData.Tester</AssemblyName>
+    <AssemblyName>GTSaveData</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
