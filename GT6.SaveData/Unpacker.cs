@@ -10,14 +10,14 @@ using GT.Shared.Polyphony.DataStructure;
 namespace GT.SaveData {
     public class Unpacker {
         private readonly string _savePath;
-        private readonly Game _game;
-        public Unpacker(string saveFolder, Game game) {
+        private readonly GameConfig _gameConfig;
+        public Unpacker(string saveFolder) {
             _savePath = saveFolder;
-            _game = game;
+            _gameConfig = new GameConfig(_savePath);
         }
 
         public void Decrypt(bool decryptBbb = true) {
-            switch (_game) {
+            switch (_gameConfig.DetermineGame()) {
                 case Game.GTHD:
                 case Game.GTPSP:
                 case Game.GT5P:
@@ -30,7 +30,7 @@ namespace GT.SaveData {
                 case Game.GT6GC:
                 case Game.GT6:
                     if (File.Exists(Path.Combine(_savePath, "PARAM.PFD")))
-                        new SonyCrypt(_game).Decrypt(_savePath);
+                        new SonyCrypt(_gameConfig.DetermineGame()).Decrypt(_savePath);
 
                     var decryptedFirst = DecryptGT6Files("GT6", decryptBbb);
                     var decryptedSecond = DecryptGT6Files("GT6_1", decryptBbb);
@@ -40,7 +40,7 @@ namespace GT.SaveData {
                     }
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(_game));
+                    throw new ArgumentOutOfRangeException(nameof(_gameConfig));
             }
         }
 
@@ -51,7 +51,7 @@ namespace GT.SaveData {
                 File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_toc_work"), DecryptFile(Path.Combine(_savePath, $"{prefix}.0")));
                 var saveWorkData = DecryptFile(Path.Combine(_savePath, $"{prefix}.1"));
 
-                if (_game == Game.GT6 && decryptBbb) {
+                if (_gameConfig.DetermineGame() == Game.GT6 && decryptBbb) {
                     var saveWork = new SaveWork(saveWorkData);
 
                     // Read bank_book_blob btree
@@ -91,7 +91,7 @@ namespace GT.SaveData {
         }
 
         private byte[] DecryptData(byte[] data) {
-            data = SwapBytes.ByteSwap(data, _game);
+            data = SwapBytes.ByteSwap(data, _gameConfig.DetermineGame());
 #if DEBUG
             //File.WriteAllBytes($"{filePath}.byteswapped.bin", data);
 #endif

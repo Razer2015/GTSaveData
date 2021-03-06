@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\GT.Shared\GT.Shared.csproj" />
     <ProjectReference Include="..\PS3FileSystem\PS3FileSystem.csproj" />
   </ItemGroup>

@@ -76,7 +76,7 @@ namespace GT.SaveData.Tester {
 
             if (args[0].Equals("d", StringComparison.OrdinalIgnoreCase) ||
                 args[0].Equals("--decrypt", StringComparison.OrdinalIgnoreCase)) {
-                new Unpacker(args[1], game).Decrypt();
+                new Unpacker(args[1]).Decrypt();
                 Console.WriteLine("Save successfully decrypted.");
             }
             else if (args[0].Equals("e", StringComparison.OrdinalIgnoreCase) ||
@@ -125,6 +125,7 @@ namespace GT.SaveData.Tester {
                 case "NPEA90002-GAME-":
                     return Game.GTHD;
                 case "NPJA90061-GAME-":
+                case "BCJS30017-GAME-":
                     return Game.GT5P;
                 case "NPHA80080-GAME-":
                 case "NPUA70087-GAME-":
