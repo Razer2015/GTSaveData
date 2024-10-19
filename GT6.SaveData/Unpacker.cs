@@ -11,9 +11,16 @@ namespace GT.SaveData {
     public class Unpacker {
         private readonly string _savePath;
         private readonly GameConfig _gameConfig;
+
         public Unpacker(string saveFolder) {
             _savePath = saveFolder;
             _gameConfig = new GameConfig(_savePath);
+        }
+
+        public Unpacker(string saveFolder, Game game)
+        {
+            _savePath = saveFolder;
+            _gameConfig = new GameConfig(game);
         }
 
         public void Decrypt(bool decryptBbb = true) {
