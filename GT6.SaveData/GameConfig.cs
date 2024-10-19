@@ -51,6 +51,11 @@ namespace GT.SaveData {
             _directory = dir;
         }
 
+        public GameConfig(Game game)
+        {
+            _game = game;
+        }
+
         public Game DetermineGame() {
             if (_game != null) return _game.Value;
 
