@@ -1,41 +1,52 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
-namespace GT.SaveData.GT6 {
-    public class GT6Index {
-        private const int BLOCKCOUNT = 0x0A;
-        private const int HASH_LENGTH = 0x18;
-        private int _blockLength = 0x168;
-        private int _hashTableOffset = 0x0E28;
+namespace GT.SaveData.GT6
+{
+    public class Gt6Index
+    {
 
-        private byte[] _data;
+        private const int BlockCount = 0x0A;
 
-        public GT6Index(byte[] data, Game game = Game.GT6) {
+        private const int HashLength = 0x18;
+
+        private readonly int _blockLength = 0x168;
+
+        private readonly int _hashTableOffset = 0x0E28;
+
+        public Gt6Index(byte[] data, Game game = Game.GT6)
+        {
             _blockLength = game.Equals(Game.GT6GC) ? 0x1CC : 0x168;
             _hashTableOffset = game.Equals(Game.GT6GC) ? 0x1210 : 0x0E28;
-            _data = data;
+            GetBytes = data;
         }
 
-        public GT6Index(string fileName) {
+        public Gt6Index(string fileName)
+        {
             if (!File.Exists(fileName)) throw new FileNotFoundException(fileName);
 
-            _data = File.ReadAllBytes(fileName);
+            GetBytes = File.ReadAllBytes(fileName);
         }
 
         /// <summary>
-        ///     Get all the possible meta informations
+        ///     Get all the possible meta information
         /// </summary>
         /// <returns></returns>
-        public MetaStruct[] GetMetaDatas() {
-            using (var ms = new MemoryStream(_data))
-            using (var reader = new EndianBinReader(ms)) {
-                var metaStructs = new MetaStruct[BLOCKCOUNT];
-                for (var i = 0; i < BLOCKCOUNT; i++) {
-                    reader.BaseStream.Position = i * _blockLength;
-                    metaStructs[i] = new MetaStruct(reader);
-                }
-
-                return metaStructs;
+        public MetaStruct[] GetMetaDatas()
+        {
+            using var ms = new MemoryStream(GetBytes);
+            using var reader = new EndianBinReader(ms);
+            var metaStructs = new List<MetaStruct>();
+            
+            var index = 0;
+            while (reader.PeekChar() != (char)0x00)
+            {
+                metaStructs.Add(new MetaStruct(reader));
+                reader.BaseStream.Position = ++index * _blockLength;
             }
+            
+            return metaStructs.ToArray();
         }
 
         /// <summary>
@@ -43,12 +54,29 @@ namespace GT.SaveData.GT6 {
         /// </summary>
         /// <param name="index">GT6.X or GT6_1.X - the X part of the filename</param>
         /// <returns></returns>
-        public MetaStruct GetMetaData(byte index) {
-            using (var ms = new MemoryStream(_data))
-            using (var reader = new EndianBinReader(ms)) {
-                reader.BaseStream.Position = (index - 1) * _blockLength;
-                return new MetaStruct(reader);
+        public MetaStruct GetMetaData(byte index)
+        {
+            using var ms = new MemoryStream(GetBytes);
+            using var reader = new EndianBinReader(ms);
+            reader.BaseStream.Position = (index - 1) * _blockLength;
+            return new MetaStruct(reader);
+        }
+        
+        /// <summary>
+        ///     Get the next file index
+        /// </summary>
+        public byte GetNextFileIndex()
+        {
+            var metaStructs = GetMetaDatas();
+            var usedIndexes = metaStructs.SelectMany(x => x.FileIndexes).ToHashSet();
+            byte index = 1;
+
+            while (usedIndexes.Contains(index))
+            {
+                index++;
             }
+
+            return index;
         }
 
         /// <summary>
@@ -56,12 +84,12 @@ namespace GT.SaveData.GT6 {
         /// </summary>
         /// <param name="index">GT6.X or GT6_1.X - the X part of the filename</param>
         /// <returns></returns>
-        public byte[] GetHash(byte index) {
-            using (var ms = new MemoryStream(_data))
-            using (var reader = new EndianBinReader(ms)) {
-                reader.BaseStream.Position = _hashTableOffset + index * HASH_LENGTH;
-                return reader.ReadBytes(HASH_LENGTH);
-            }
+        public byte[] GetHash(byte index)
+        {
+            using var ms = new MemoryStream(GetBytes);
+            using var reader = new EndianBinReader(ms);
+            reader.BaseStream.Position = _hashTableOffset + index * HashLength;
+            return reader.ReadBytes(HashLength);
         }
 
         /// <summary>
@@ -69,13 +97,13 @@ namespace GT.SaveData.GT6 {
         /// </summary>
         /// <param name="index">GT6.X or GT6_1.X - the X part of the filename</param>
         /// <param name="metaInfo">MetaData to be saved</param>
-        public void SetMetaData(byte index, MetaStruct metaInfo) {
-            using (var ms = new MemoryStream(_data))
-            using (var writer = new EndianBinWriter(ms)) {
-                writer.BaseStream.Position = (index - 1) * _blockLength;
-                metaInfo.Write(writer);
-                _data = ms.ToArray();
-            }
+        public void SetMetaData(byte index, MetaStruct metaInfo)
+        {
+            using var ms = new MemoryStream(GetBytes);
+            using var writer = new EndianBinWriter(ms);
+            writer.BaseStream.Position = (index - 1) * _blockLength;
+            metaInfo.Write(writer);
+            GetBytes = ms.ToArray();
         }
 
         /// <summary>
@@ -84,15 +112,16 @@ namespace GT.SaveData.GT6 {
         /// <param name="index">GT6.X or GT6_1.X - the X part of the filename</param>
         /// <param name="hash">New hash to be saved</param>
         /// <returns></returns>
-        public void SetHash(byte index, byte[] hash) {
-            using (var ms = new MemoryStream(_data))
-            using (var writer = new EndianBinWriter(ms)) {
-                writer.BaseStream.Position = _hashTableOffset + (index - 1) * HASH_LENGTH;
-                writer.Write(hash);
-                _data = ms.ToArray();
-            }
+        public void SetHash(byte index, byte[] hash)
+        {
+            using var ms = new MemoryStream(GetBytes);
+            using var writer = new EndianBinWriter(ms);
+            writer.BaseStream.Position = _hashTableOffset + (index - 1) * HashLength;
+            writer.Write(hash);
+            GetBytes = ms.ToArray();
         }
 
-        public byte[] GetBytes => _data;
+        public byte[] GetBytes { get; private set; }
+
     }
 }

@@ -2,63 +2,77 @@
 using System.IO;
 using GT.Shared.Polyphony.DataStructure;
 
-namespace GT.SaveData.GT6 {
-    public class SaveWork {
+namespace GT.SaveData.GT6
+{
+    public class SaveWork
+    {
+
         private Header _header;
+
         private PDTree _pdTree;
+
         private byte[] _data;
 
-        public SaveWork(byte[] data) {
+        public SaveWork(byte[] data)
+        {
             _data = data;
             Read();
         }
 
-        public byte[] Save() {
+        public byte[] Save()
+        {
             return Write();
         }
 
-        public byte[] BankBookBlob {
-            get {
-
-                return (byte[])_pdTree.PDTreeData.Fields.GetDataBySymbol(new[] { "user_profile", "bank_book_blob" }); ;
+        public byte[] BankBookBlob
+        {
+            get
+            {
+                return (byte[])_pdTree.PDTreeData.Fields.GetDataBySymbol(new[] { "user_profile", "bank_book_blob" });
+                ;
             }
-            set {
-                _pdTree.PDTreeData.Fields.SetDataBySymbol(new[] { "user_profile", "bank_book_blob" }, value);
-            }
+            set { _pdTree.PDTreeData.Fields.SetDataBySymbol(new[] { "user_profile", "bank_book_blob" }, value); }
         }
 
-        private void Read() {
-            using (var ms = new MemoryStream(_data))
-            using (var reader = new EndianBinReader(ms)) {
-                _header = new Header(reader);
+        private void Read()
+        {
+            using var ms = new MemoryStream(_data);
+            using var reader = new EndianBinReader(ms);
+            _header = new Header(reader);
 
-                _pdTree = new PDTree(_data, Shared.Polyphony.DataStructure.Game.GT6);
-                _pdTree.Read();
-            }
+            _pdTree = new PDTree(_data, Shared.Polyphony.DataStructure.Game.GT6);
+            _pdTree.Read();
         }
 
-        private byte[] Write() {
-            using (var ms = new MemoryStream())
-            using (var writer = new EndianBinWriter(ms)) {
-                _pdTree.Write();
-                _header.Length = _pdTree.FileData.Length;
-                _header.Write(writer);
-                writer.Write(_pdTree.FileData);
+        private byte[] Write()
+        {
+            using var ms = new MemoryStream();
+            using var writer = new EndianBinWriter(ms);
+            _pdTree.Write();
+            _header.Length = _pdTree.FileData.Length;
+            _header.Write(writer);
+            writer.Write(_pdTree.FileData);
 
-                return ms.ToArray();
-            }
+            return ms.ToArray();
         }
 
-        internal struct Header {
+        internal struct Header
+        {
+
             internal int VersionMajor { get; set; }
+
             internal int VersionMinor { get; set; }
+
             internal int Crc32 { get; set; }
+
             internal int Length { get; set; }
 
-            public Header(EndianBinReader reader) {
+            public Header(EndianBinReader reader)
+            {
                 VersionMajor = reader.ReadInt32();
 
-                switch (VersionMajor) {
+                switch (VersionMajor)
+                {
                     case 0x00000018:
                     case 0x00000012:
                         break;
@@ -71,12 +85,15 @@ namespace GT.SaveData.GT6 {
                 Length = reader.ReadInt32();
             }
 
-            public void Write(EndianBinWriter writer) {
+            public void Write(EndianBinWriter writer)
+            {
                 writer.Write(VersionMajor);
                 writer.Write(VersionMinor);
                 writer.Write(Crc32);
                 writer.Write(Length);
             }
+
         }
+
     }
 }
