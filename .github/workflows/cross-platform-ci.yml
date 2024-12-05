@@ -219,6 +219,18 @@ jobs:
           name: osx-x64
           path: ./artifacts/osx-x64
 
+      - name: Extract linux-amd64 artifacts
+        run: tar -xzf ./artifacts/linux-amd64/linux-amd64.tar.gz -C ./artifacts/linux-amd64
+
+      - name: Extract linux-arm64 artifacts
+        run: tar -xzf ./artifacts/linux-arm64/linux-arm64.tar.gz -C ./artifacts/linux-arm64
+
+      - name: Extract windows-x64 artifacts
+        run: tar -xzf ./artifacts/windows-x64/windows-x64.tar.gz -C ./artifacts/windows-x64
+
+      - name: Extract osx-x64 artifacts
+        run: tar -xzf ./artifacts/osx-x64/osx-x64.tar.gz -C ./artifacts/osx-x64
+
       - name: Create Release
         id: create_release
         uses: ncipollo/release-action@v1
