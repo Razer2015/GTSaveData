@@ -240,7 +240,7 @@ jobs:
             ./artifacts/linux-arm64/linux-arm64.tar.gz,
             ./artifacts/windows-x64/windows-x64.tar.gz,
             ./artifacts/osx-x64/osx-x64.tar.gz,
-            ./artifacts/linux-amd64/GT.SaveData.Console,
-            ./artifacts/linux-arm64/GT.SaveData.Console,
-            ./artifacts/windows-x64/GT.SaveData.Console.exe,
-            ./artifacts/osx-x64/GT.SaveData.Console
+            ./artifacts/linux-amd64/GTSaveData,
+            ./artifacts/linux-arm64/GTSaveData,
+            ./artifacts/windows-x64/GTSaveData.exe,
+            ./artifacts/osx-x64/GTSaveData
