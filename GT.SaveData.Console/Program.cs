@@ -9,9 +9,7 @@ class Program
 
     private static void PrintInfo()
     {
-        var assembly = Assembly.GetExecutingAssembly();
-        var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
-        string? version = fvi.FileVersion;
+        string? version = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
 
         System.Console.WriteLine($"Version {version}");
         System.Console.WriteLine("Coded by xfileFIN (Team eventHorizon)");
