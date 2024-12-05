@@ -45,6 +45,9 @@ namespace GT.SaveData {
                     }
                     break;
                 case Game.GT5:
+                    if (File.Exists(Path.Combine(_savePath, "PARAM.PFD")))
+                        new SonyCrypt(_gameConfig.DetermineGame()).Decrypt(_savePath);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(_gameConfig));
             }
@@ -53,11 +56,11 @@ namespace GT.SaveData {
         private bool DecryptGt6Files(string prefix, bool decryptBbb = true) {
             try {
                 if (!File.Exists(Path.Combine(_savePath, $"{prefix}.0"))) return false;
-                
+
                 // Decrypt the TOC file and parse it
                 var tocBuffer = DecryptFile(Path.Combine(_savePath, $"{prefix}.0"));
                 File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_toc_work"), tocBuffer);
-                
+
                 var toc = new Gt6Index(tocBuffer, _gameConfig.DetermineGame());
                 var files = toc.GetMetaDatas();
                 if (files.Length == 0) return false;
@@ -65,7 +68,7 @@ namespace GT.SaveData {
                 foreach (var file in files)
                 {
                     var processingFile = Path.GetFileNameWithoutExtension(file.FilePath);
-                    
+
                     byte[] buffer;
                     using (var memoryStream = new MemoryStream())
                     {
@@ -79,10 +82,10 @@ namespace GT.SaveData {
                         }
                         buffer = memoryStream.ToArray();
                     }
-                    
+
                     if (processingFile.Equals("tmp_save_work") && _gameConfig.DetermineGame() == Game.GT6 && decryptBbb) {
                         var saveWork = new SaveWork(buffer);
-                    
+
                         // Read bank_book_blob btree
                         var bbbData = saveWork.BankBookBlob;
                         // Check if BBB is encrypted
@@ -92,7 +95,7 @@ namespace GT.SaveData {
                             buffer = saveWork.Save();
                         }
                     }
-                    
+
                     File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.{processingFile}"), buffer);
                 }
 

@@ -44,7 +44,7 @@ namespace GT.SaveData {
     public class GameConfig {
         private const string CONFIG_NAME = "games.json";
         private readonly string _directory;
-        private GameConfigModel _gameConfig;
+        private GameConfigModel? _gameConfig;
         private Game? _game { get; set; }
 
         public GameConfig(string dir) {
@@ -68,7 +68,7 @@ namespace GT.SaveData {
                 }
             }
             else {
-                _gameConfig = new GameConfigModel(new GameModel[] {
+                _gameConfig = new GameConfigModel(new[] {
                     new GameModel("NPEA90002", Game.GTHD),
                     new GameModel("NPUA80019", Game.GTHD),
                     new GameModel("BCES00104", Game.GT5P),
@@ -87,18 +87,19 @@ namespace GT.SaveData {
                 File.WriteAllText(CONFIG_NAME, JsonConvert.SerializeObject(_gameConfig, Formatting.Indented));
             }
 
-            var gameCode = Path.GetFileName(_directory)
+            string? gameCode = Path.GetFileName(_directory)
                 .Split('-')
                 .FirstOrDefault();
 
-            var match = _gameConfig.Games.FirstOrDefault(x => x.GameCode.Equals(gameCode, StringComparison.OrdinalIgnoreCase));
-            if (match != default) {
-                _game = match.Game;
-                return match.Game;
-            }
-            else {
+            var match = _gameConfig?.Games.FirstOrDefault(x => x.GameCode.Equals(gameCode, StringComparison.OrdinalIgnoreCase));
+            if (match == default)
+            {
                 throw new ArgumentOutOfRangeException("Couldn't determine the game version.");
             }
+
+            _game = match.Game;
+            return match.Game;
+
         }
 
         public void UpdateGame(Game game) {

@@ -1,8 +1,12 @@
 ﻿using System;
 
-namespace GT.SaveData.Crypt {
-    public static class SwapBytes {
-        public static byte[] ByteSwap(byte[] data, Game game) {
+namespace GT.SaveData.Crypt
+{
+    public static class SwapBytes
+    {
+
+        public static byte[] ByteSwap(byte[] data, Game game)
+        {
             //var (multiplier1, multiplier2) = GetMultipliers(game);
             //var offset1 = GetOffset(data.Length, multiplier1);
             //var offset2 = GetOffset(data.Length - 0x04, multiplier2) + 0x04;
@@ -12,8 +16,10 @@ namespace GT.SaveData.Crypt {
             return Swap(data, 0x04, offset2);
         }
 
-        private static (float Multiplier1, float Multiplier2) GetMultipliers(Game game) {
-            switch (game) {
+        private static (float Multiplier1, float Multiplier2) GetMultipliers(Game game)
+        {
+            switch (game)
+            {
                 case Game.GTHD:
                 case Game.GTPSP:
                 case Game.GT5P:
@@ -23,20 +29,25 @@ namespace GT.SaveData.Crypt {
                 case Game.GT6:
                     return (0.753459f, 0.262591f); // These seem to be having issues with some saves
                 default:
-                    throw new ArgumentOutOfRangeException($"Argument out of range in {nameof(GetMultipliers)} for {nameof(game)}");
+                    throw new ArgumentOutOfRangeException(
+                        $"Argument out of range in {nameof(GetMultipliers)} for {nameof(game)}");
             }
         }
 
-        private static int GetOffset(int length, float multiplier) {
+        private static int GetOffset(int length, float multiplier)
+        {
             return (int)((length - 0x04) * multiplier);
         }
 
-        private static int GetOffset(int length, uint multiplier) {
+        private static int GetOffset(int length, uint multiplier)
+        {
             return (int)(((length - 0x04) * multiplier) >> 32);
         }
 
-        private static (int Offset1, int Offset2) GetOffsets(int length, Game game) {
-            switch (game) {
+        private static (int Offset1, int Offset2) GetOffsets(int length, Game game)
+        {
+            switch (game)
+            {
                 case Game.GTHD:
                 case Game.GTPSP:
                 case Game.GT5P:
@@ -47,12 +58,13 @@ namespace GT.SaveData.Crypt {
                     //return (GetOffset(length, 0.753459f), GetOffset(length - 0x04, 0.262591f) + 0x04);
                     return (GetOffset(length, 0xC0E2BE6E), GetOffset(length - 0x04, 0x4339334B) + 0x04);
                 default:
-                    throw new ArgumentOutOfRangeException($"Argument out of range in {nameof(GetOffsets)} for {nameof(game)}");
+                    throw new ArgumentOutOfRangeException(
+                        $"Argument out of range in {nameof(GetOffsets)} for {nameof(game)}");
             }
-            
         }
 
-        private static byte[] Swap(byte[] data, long offset1, long offset2) {
+        private static byte[] Swap(byte[] data, long offset1, long offset2)
+        {
             var save1 = data[offset1];
             var save2 = data[offset1 + 1];
             var save3 = data[offset1 + 2];
@@ -70,5 +82,6 @@ namespace GT.SaveData.Crypt {
 
             return data;
         }
+
     }
 }
