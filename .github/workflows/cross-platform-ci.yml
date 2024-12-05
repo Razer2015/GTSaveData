@@ -1,4 +1,4 @@
-name: Build and push
+name: Build and publish
 
 on:
   workflow_dispatch:
@@ -17,11 +17,6 @@ on:
         description: 'Specific version'
         required: false
         default: ''
-      push:
-        description: 'Push to DockerHub'
-        required: true
-        default: true
-        type: boolean
 
 jobs:
   buildVariables:
@@ -112,7 +107,7 @@ jobs:
           echo "COMMIT_HASH=${{ env.COMMIT_HASH }}" >> $GITHUB_OUTPUT
 
   build:
-    name: "Build and push logger"
+    name: "Build and upload artifacts"
     needs: [buildVariables]
     runs-on: ubuntu-latest
     env:
@@ -147,7 +142,6 @@ jobs:
         run: |
           sed -i 's/<AssemblyVersion>.*<\/AssemblyVersion>/<AssemblyVersion>${{ env.RELEASE_VERSION }}<\/AssemblyVersion>/' GT.SaveData.Console/GT.SaveData.Console.csproj
           sed -i 's/<FileVersion>.*<\/FileVersion>/<FileVersion>${{ env.RELEASE_VERSION }}<\/FileVersion>/' GT.SaveData.Console/GT.SaveData.Console.csproj
-
 
       - name: Build
         run: |
@@ -241,6 +235,7 @@ jobs:
           prerelease: false
           allowUpdates: true
           updateOnlyUnreleased: true
+          artifacts: |
             ./artifacts/linux-amd64/linux-amd64.tar.gz,
             ./artifacts/linux-arm64/linux-arm64.tar.gz,
             ./artifacts/windows-x64/windows-x64.tar.gz,
