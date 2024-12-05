@@ -1,0 +1,251 @@
+name: Build and push
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_level:
+        type: choice
+        required: true
+        description: Version level
+        options:
+          - commit
+          - patch
+          - minor
+          - major
+        default: 'patch'
+      specific-version:
+        description: 'Specific version'
+        required: false
+        default: ''
+      push:
+        description: 'Push to DockerHub'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  buildVariables:
+    name: "Get variables"
+    runs-on: ubuntu-latest
+    outputs:
+      tag_version: ${{ steps.set_outputs.outputs.TAG_VERSION }}
+      release_version: ${{ steps.set_outputs.outputs.RELEASE_VERSION }}
+      commit_branch: ${{ steps.set_outputs.outputs.COMMIT_BRANCH }}
+      commit_hash: ${{ steps.set_outputs.outputs.COMMIT_HASH }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: 'Get Previous tag'
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          fallback: 0.0.0
+
+      - name: 'Get next version'
+        id: semvers
+        uses: "WyriHaximus/github-action-next-semvers@v1"
+        with:
+          version: ${{ steps.previoustag.outputs.tag }}
+
+      - name: Print WyriHaximus current and next version
+        run: |
+          echo "Major version: ${{ steps.semvers.outputs.major }}"
+          echo "Minor version: ${{ steps.semvers.outputs.minor }}"
+          echo "Patch version: ${{ steps.semvers.outputs.patch }}"
+
+      - name: Get Branch
+        id: branch
+        run: echo "COMMIT_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+
+      - name: Get Hash
+        id: hash
+        run: echo "COMMIT_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
+
+      - name: Check Branch
+        run: echo "${{ env.COMMIT_BRANCH }}"
+
+      - name: Check Hash
+        run: echo "${{ env.COMMIT_HASH }}"
+
+      - name: Set release version
+        run: |
+          if ${{ github.event.inputs.specific-version != '' }};
+          then
+            echo "TAG_VERSION=${{ github.event.inputs.specific-version }}" >> $GITHUB_ENV
+            echo "RELEASE_VERSION=${{ github.event.inputs.specific-version }}" >> $GITHUB_ENV
+          else
+            if ${{ github.event.inputs.version_level == 'major' }};
+            then
+              echo "TAG_VERSION=${{ steps.semvers.outputs.major }}" >> $GITHUB_ENV
+              echo "RELEASE_VERSION=${{ steps.semvers.outputs.major }}" >> $GITHUB_ENV
+            elif ${{ github.event.inputs.version_level == 'minor' }};
+            then
+              echo "TAG_VERSION=${{ steps.semvers.outputs.minor }}" >> $GITHUB_ENV
+              echo "RELEASE_VERSION=${{ steps.semvers.outputs.minor }}" >> $GITHUB_ENV
+            elif ${{ github.event.inputs.version_level == 'patch' }};
+            then
+              echo "TAG_VERSION=${{ steps.semvers.outputs.patch }}" >> $GITHUB_ENV
+              echo "RELEASE_VERSION=${{ steps.semvers.outputs.patch }}" >> $GITHUB_ENV
+            else
+              echo "TAG_VERSION=${{ steps.semvers.outputs.patch }}-${{ env.COMMIT_HASH }}" >> $GITHUB_ENV
+              echo "RELEASE_VERSION=${{ steps.semvers.outputs.patch }}-${{ env.COMMIT_HASH }}" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Print release and tag version
+        run: |
+          echo "Tag version: ${{ env.TAG_VERSION }}"
+          echo "Release version: ${{ env.RELEASE_VERSION }}"
+
+      - name: Set output variables
+        id: set_outputs
+        run: |
+          echo "TAG_VERSION=${{ env.TAG_VERSION }}" >> $GITHUB_OUTPUT
+          echo "RELEASE_VERSION=${{ env.RELEASE_VERSION }}" >> $GITHUB_OUTPUT
+          echo "COMMIT_BRANCH=${{ env.COMMIT_BRANCH }}" >> $GITHUB_OUTPUT
+          echo "COMMIT_HASH=${{ env.COMMIT_HASH }}" >> $GITHUB_OUTPUT
+
+  build:
+    name: "Build and push logger"
+    needs: [buildVariables]
+    runs-on: ubuntu-latest
+    env:
+      TAG_VERSION: ${{ needs.buildVariables.outputs.tag_version }}
+      RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
+      COMMIT_BRANCH: ${{ needs.buildVariables.outputs.commit_branch }}
+      COMMIT_HASH: ${{ needs.buildVariables.outputs.commit_hash }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          # Look to see if there is a cache hit for the corresponding requirements file
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Update .csproj version
+        run: |
+          sed -i 's/<AssemblyVersion>.*<\/AssemblyVersion>/<AssemblyVersion>${{ env.RELEASE_VERSION }}<\/AssemblyVersion>/' GT.SaveData.Console/GT.SaveData.Console.csproj
+          sed -i 's/<FileVersion>.*<\/FileVersion>/<FileVersion>${{ env.RELEASE_VERSION }}<\/FileVersion>/' GT.SaveData.Console/GT.SaveData.Console.csproj
+
+
+      - name: Build
+        run: |
+          dotnet publish "GT.SaveData.Console/GT.SaveData.Console.csproj" -c Release -o publish/linux/amd64 -r linux-x64 --self-contained false /p:UseAppHost=true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:DeleteExistingFiles=true
+          dotnet publish "GT.SaveData.Console/GT.SaveData.Console.csproj" -c Release -o publish/linux/arm64 -r linux-arm64 --self-contained false /p:UseAppHost=true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:DeleteExistingFiles=true
+          dotnet publish "GT.SaveData.Console/GT.SaveData.Console.csproj" -c Release -o publish/windows/x64 -r win-x64 --self-contained false /p:UseAppHost=true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:DeleteExistingFiles=true
+          dotnet publish "GT.SaveData.Console/GT.SaveData.Console.csproj" -c Release -o publish/osx/x64 -r osx-x64 --self-contained false /p:UseAppHost=true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:DeleteExistingFiles=true
+
+      - name: Compress build artifacts
+        run: |
+          mkdir -p ./artifacts
+          tar -czf ./artifacts/linux-amd64.tar.gz -C publish/linux/amd64 .
+          tar -czf ./artifacts/linux-arm64.tar.gz -C publish/linux/arm64 .
+          tar -czf ./artifacts/windows-x64.tar.gz -C publish/windows/x64 .
+          tar -czf ./artifacts/osx-x64.tar.gz -C publish/osx/x64 .
+
+      - name: Archive amd64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64
+          path: ./artifacts/linux-amd64.tar.gz
+
+      - name: Archive arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: ./artifacts/linux-arm64.tar.gz
+
+      - name: Archive windows-x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: ./artifacts/windows-x64.tar.gz
+
+      - name: Archive osx-x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osx-x64
+          path: ./artifacts/osx-x64.tar.gz
+
+  create_release:
+    needs: [buildVariables, build]
+    permissions:
+      contents: write
+    name: Create a new release
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.version_level != 'commit' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download amd64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-amd64
+          path: ./artifacts/linux-amd64
+
+      - name: Download arm64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: ./artifacts/linux-arm64
+
+      - name: Download windows-x64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-x64
+          path: ./artifacts/windows-x64
+
+      - name: Download osx-x64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: osx-x64
+          path: ./artifacts/osx-x64
+
+      - name: Create Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        env:
+          TAG_VERSION: ${{ needs.buildVariables.outputs.tag_version }}
+          RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
+          COMMIT_BRANCH: ${{ needs.buildVariables.outputs.commit_branch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag: "${{ env.TAG_VERSION }}"
+          name: "${{ env.RELEASE_VERSION }}"
+          commit: "${{ env.COMMIT_BRANCH }}"
+          draft: false
+          prerelease: false
+          allowUpdates: true
+          updateOnlyUnreleased: true
+            ./artifacts/linux-amd64/linux-amd64.tar.gz,
+            ./artifacts/linux-arm64/linux-arm64.tar.gz,
+            ./artifacts/windows-x64/windows-x64.tar.gz,
+            ./artifacts/osx-x64/osx-x64.tar.gz,
+            ./artifacts/linux-amd64/GT.SaveData.Console,
+            ./artifacts/linux-arm64/GT.SaveData.Console,
+            ./artifacts/windows-x64/GT.SaveData.Console.exe,
+            ./artifacts/osx-x64/GT.SaveData.Console
