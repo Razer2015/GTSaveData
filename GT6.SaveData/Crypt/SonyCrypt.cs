@@ -1,11 +1,12 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
 using PS3FileSystem;
 
 namespace GT.SaveData.Crypt
 {
     public class SonyCrypt
     {
-
         private readonly Game _game;
 
         public SonyCrypt(Game game)
@@ -19,14 +20,23 @@ namespace GT.SaveData.Crypt
             manager.DecryptAllFiles();
         }
 
-        public void Load(string path)
+        public byte[]? DecryptFileToBytes(string filePath)
         {
-            Ps3SaveManager manager = new Ps3SaveManager(path, GetKey());
+            var directory = Path.GetDirectoryName(filePath);
+            if (directory == null) return null;
+            var manager = new Ps3SaveManager(directory, GetKey());
+            
+            return manager.Files.FirstOrDefault(x => x.FilePath == filePath)?.DecryptToBytes();
+        }
+        
+        public Ps3SaveManager Load(string path)
+        {
+            return new Ps3SaveManager(path, GetKey());
         }
 
         public Ps3File[] GetFiles(string path)
         {
-            Ps3SaveManager manager = new Ps3SaveManager(path, GetKey());
+            var manager = new Ps3SaveManager(path, GetKey());
             return manager.Files;
         }
 

@@ -34,8 +34,8 @@ namespace GT.SaveData {
                     break;
                 case Game.GT6GC:
                 case Game.GT6:
-                    if (File.Exists(Path.Combine(_savePath, "PARAM.PFD")))
-                        new SonyCrypt(_gameConfig.DetermineGame()).Decrypt(_savePath);
+                    // if (File.Exists(Path.Combine(_savePath, "PARAM.PFD")))
+                    //     new SonyCrypt(_gameConfig.DetermineGame()).Decrypt(_savePath);
 
                     var decryptedFirst = DecryptGt6Files("GT6", decryptBbb);
                     var decryptedSecond = DecryptGt6Files("GT6_1", decryptBbb);
@@ -108,7 +108,16 @@ namespace GT.SaveData {
         }
 
         private byte[] DecryptFile(string filePath) {
-            var data = File.ReadAllBytes(filePath);
+            var data = File.Exists(Path.Combine(_savePath, "PARAM.PFD")) 
+                ? new SonyCrypt(_gameConfig.DetermineGame()).DecryptFileToBytes(filePath) 
+                : File.ReadAllBytes(filePath);
+            // var data = File.ReadAllBytes(filePath);
+
+            if (data == null)
+            {
+                throw new Exception($"Failed to decrypt file {filePath}.");
+            }
+            
             return DecryptData(data, _gameConfig.DetermineGame());
         }
 

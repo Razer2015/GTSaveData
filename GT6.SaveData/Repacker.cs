@@ -153,8 +153,11 @@ namespace GT.SaveData {
             {
                 return null;
             }
-
-            byte[] tocBuffer = File.ReadAllBytes(Path.Combine(_savePath, $"{prefix}.0"));
+            
+            var filePath = Path.Combine(_savePath, $"{prefix}.0");
+            var tocBuffer = File.Exists(Path.Combine(_savePath, "PARAM.PFD")) 
+                ? new SonyCrypt(_game).DecryptFileToBytes(filePath) 
+                : File.ReadAllBytes(filePath);
             tocBuffer = Unpacker.DecryptData(tocBuffer, _game);
             File.WriteAllBytes(Path.Combine(_savePath, $"{prefix}.tmp_toc_work"), tocBuffer);
 
