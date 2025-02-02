@@ -48,6 +48,11 @@ namespace PS3FileSystem
             return Manager.Param_PFD.Decrypt(FilePath);
         }
 
+        public byte[] GetBytes()
+        {
+            return Manager.Param_PFD.GetBytes(FilePath);
+        }
+
         public byte[] DecryptToBytes()
         {
             return Manager.Param_PFD.DecryptToBytes(FilePath);

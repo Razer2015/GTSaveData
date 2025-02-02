@@ -25,10 +25,14 @@ namespace GT.SaveData.Crypt
             var directory = Path.GetDirectoryName(filePath);
             if (directory == null) return null;
             var manager = new Ps3SaveManager(directory, GetKey());
-            
-            return manager.Files.FirstOrDefault(x => x.FilePath == filePath)?.DecryptToBytes();
+
+            var file = manager.Files.FirstOrDefault(x => x.FilePath == filePath);
+
+            if (file == null) return null;
+
+            return !file.IsEncrypted ? file.GetBytes() : file?.DecryptToBytes();
         }
-        
+
         public Ps3SaveManager Load(string path)
         {
             return new Ps3SaveManager(path, GetKey());

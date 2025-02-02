@@ -967,6 +967,25 @@ namespace PS3FileSystem
         }
 
         /// <summary>
+        ///     Decrypt all files that are inside the specified root path, andalso availible inside one of the Param.PFD entries
+        /// </summary>
+        /// <param name="filepath">the root path of the directory containing all files to be decypted</param>
+        /// <returns>byte array of the current file</returns>
+        public byte[] GetBytes(string filepath)
+        {
+            if (!File.Exists(filepath))
+                return null;
+            string name = new FileInfo(filepath).Name;
+            FileStream fs = File.Open(filepath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            var data = new byte[fs.Length];
+            fs.Seek(0, SeekOrigin.Begin);
+            fs.Read(data, 0, data.Length);
+            fs.Close();
+            fs.Dispose();
+            return data;
+        }
+
+        /// <summary>
         ///     Decrypts specified filepath into a byte array
         /// </summary>
         /// <param name="filepath">the filepath to decrypt, file must be located inside the Param.PFD Entries</param>
